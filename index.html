@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Prototipo — Plataforma de Cuidado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<style>
+:root{
+  --bg:#fffbf5; --surface:#ffffff; --surface-muted:#f6efe4; --border:#e8ddc9;
+  --ink:#17324a; --ink-soft:#2c4d6b; --ink-tint:#e4ecf1;
+  --verified:#3d7a54; --verified-bg:#e6f0e8;
+  --warning:#b5651d; --warning-bg:#f7ead9;
+  --critical:#ab3327; --critical-bg:#f8e4e1;
+  --font-display:'Fraunces',Georgia,serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+  --tap:48px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+h1,h2,h3{font-family:var(--font-display);font-weight:600;margin:0;}
+button{font-family:var(--font-body);cursor:pointer;}
+#root{min-height:100dvh;}
+::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState } = React;
+
+/* ================= ICONS ================= */
+function Icon({ path, size=20, color='currentColor', sw=2 }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"><path d={path}/></svg>;
+}
+const I = {
+  shield:"M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5l-8-3z",
+  check:"M20 6 9 17l-5-5",
+  pin:"M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z M12 13a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
+  meal:"M18 2v6a2 2 0 0 1-2 2h-1v10 M15 10V2 M12 2v20 M6 2v20 M6 12H2",
+  hydration:"M12 2s6 7 6 12a6 6 0 0 1-12 0c0-5 6-12 6-12z",
+  activity:"M22 12h-4l-3 9L9 3l-3 9H2",
+  mood:"M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M8 14s1.5 2 4 2 4-2 4-2 M9 9h.01 M15 9h.01",
+  camera:"M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  bath:"M9 6 6.5 3.5a1.5 1.5 0 0 0-2.6 1L4 6 M4 12h16 M4 12v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6",
+  note:"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M9 13h6 M9 17h6",
+  alert:"M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01",
+  chevron:"m9 18 6-6-6-6",
+  back:"M19 12H5 M12 19l-7-7 7-7",
+  home:"M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z",
+  history:"M3 3v5h5 M3.05 13A9 9 0 1 0 6 5.3L3 8 M12 7v5l4 2",
+  message:"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+  users:"M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75",
+};
+
+/* ================= DEMO DATA ================= */
+const RESIDENTS = [
+  { id:"carmen", name:"Carmen Rivera Demo", age:82, room:"Habitación 104", initials:"CR", color:"#e7cf9f", status:"active_care", caregiverId:"maria", lastUpdate:"2:14 PM" },
+  { id:"jose", name:"José Méndez Demo", age:79, room:"Habitación 108", initials:"JM", color:"#bcd4c7", status:"shift_completed", lastUpdate:"1:40 PM" },
+  { id:"elena", name:"Elena Cruz Demo", age:85, room:"Habitación 112", initials:"EC", color:"#e3c2b8", status:"upcoming", statusDetail:"3:00 PM", lastUpdate:"11:05 AM" },
+];
+const CAREGIVERS = {
+  maria: { id:"maria", name:"María López Demo", role:"Cuidadora Certificada", initials:"ML", color:"#cfe0d6", verified:true, years:7, langs:["Español","Inglés"],
+    bio:"María se especializa en el cuidado de adultos mayores con movilidad reducida. Le apasiona crear rutinas que combinan bienestar físico y compañía genuina.",
+    lastReview:"Julio 2026",
+    credentials:[
+      {label:"Identidad verificada",status:"ok"},{label:"Background Check revisado",status:"ok"},
+      {label:"Ley 300 vigente",status:"ok"},{label:"CPR vigente",status:"ok"},
+      {label:"BLS vigente",status:"ok"},{label:"Capacitación interna completada",status:"ok"},
+    ]},
+  pedro: { id:"pedro", name:"Pedro Santos Demo", role:"Cuidador", initials:"PS", color:"#e0d3c2", verified:false, years:2, langs:["Español"],
+    bio:"Pedro está completando su proceso de verificación antes de recibir asignaciones activas.", lastReview:"Pendiente",
+    credentials:[
+      {label:"Identidad verificada",status:"ok"},{label:"Background Check revisado",status:"action"},
+      {label:"Ley 300 vigente",status:"action"},{label:"CPR vigente",status:"ok"},
+      {label:"BLS vigente",status:"action"},{label:"Capacitación interna completada",status:"action"},
+    ]},
+  laura: { id:"laura", name:"Laura Méndez Demo", role:"Enfermera Práctica", initials:"LM", color:"#d9cbe0", verified:true, years:11, langs:["Español","Inglés","Portugués"],
+    bio:"Laura aporta experiencia clínica al equipo, con enfoque en pacientes con condiciones crónicas.", lastReview:"Junio 2026",
+    credentials:[
+      {label:"Identidad verificada",status:"ok"},{label:"Background Check revisado",status:"ok"},
+      {label:"Ley 300 vigente",status:"ok"},{label:"CPR vigente",status:"expiring",detail:"Vence en 12 días"},
+      {label:"BLS vigente",status:"ok"},{label:"Capacitación interna completada",status:"ok"},
+    ]},
+};
+const FAMILY = { name:"Ana Rivera Demo", relationship:"Hija", canViewPhotos:true, canReceiveNotifications:true };
+const TIMELINE_TODAY = [
+  { type:"pin", time:"8:02 AM", title:"Check-in", detail:"María llegó y comenzó el turno.", worker:"María López Demo" },
+  { type:"meal", time:"8:45 AM", title:"Desayuno", detail:"Consumió casi todo." },
+  { type:"hydration", time:"9:20 AM", title:"Hidratación", detail:"Tomó agua." },
+  { type:"activity", time:"10:15 AM", title:"Actividad", detail:"Caminata de 15 minutos." },
+  { type:"mood", time:"11:30 AM", title:"Estado de ánimo", detail:"Animada y conversadora." },
+  { type:"meal", time:"12:30 PM", title:"Almuerzo", detail:"Consumió aproximadamente 75%." },
+  { type:"camera", time:"2:00 PM", title:"Actividad con fotografía", detail:"Tarde de dominó en el jardín.", photo:true },
+  { type:"check", time:"4:55 PM", title:"Check-out", detail:"Turno completado.", worker:"María López Demo" },
+];
+
+/* ================= PRIMITIVES ================= */
+function Badge({tone,children,icon,size}) {
+  const map = { verified:["var(--verified-bg)","var(--verified)"], warning:["var(--warning-bg)","var(--warning)"],
+    critical:["var(--critical-bg)","var(--critical)"], neutral:["var(--surface-muted)","var(--ink-soft)"], active:["var(--ink-tint)","var(--ink)"] };
+  const [bg,fg] = map[tone];
+  return <span style={{display:"inline-flex",alignItems:"center",gap:6,background:bg,color:fg,borderRadius:999,
+    padding:size==="sm"?"4px 10px":"6px 14px",fontSize:size==="sm"?12:14,fontWeight:600,whiteSpace:"nowrap"}}>{icon}{children}</span>;
+}
+function Card({children,onClick,style}) {
+  return <div onClick={onClick} style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:16,
+    boxShadow:"0 1px 3px rgba(23,50,74,.06)",padding:16,cursor:onClick?"pointer":"default",...style}}>{children}</div>;
+}
+function Avatar({initials,color,size=56}) {
+  return <div style={{width:size,height:size,borderRadius:"50%",background:color,display:"flex",alignItems:"center",justifyContent:"center",
+    fontFamily:"var(--font-display)",fontWeight:600,fontSize:size/2.6,flexShrink:0}}>{initials}</div>;
+}
+function Header({title,subtitle,onBack}) {
+  return <div style={{display:"flex",alignItems:"center",gap:12,padding:"20px 20px 12px"}}>
+    {onBack && <button onClick={onBack} aria-label="Volver" style={{width:"var(--tap)",height:"var(--tap)",border:"none",background:"transparent",borderRadius:999,display:"flex",alignItems:"center",justifyContent:"center"}}><Icon path={I.back}/></button>}
+    <div><h1 style={{fontSize:22}}>{title}</h1>{subtitle && <p style={{margin:0,color:"var(--ink-soft)",fontSize:13}}>{subtitle}</p>}</div>
+  </div>;
+}
+function PrimaryButton({children,onClick,disabled,critical}) {
+  return <button onClick={onClick} disabled={disabled} style={{width:"100%",minHeight:"var(--tap)",borderRadius:16,border:"none",
+    background:disabled?"var(--border)":critical?"var(--critical)":"var(--ink)",color:disabled?"var(--ink-soft)":"white",
+    fontSize:17,fontWeight:600,padding:"0 20px"}}>{children}</button>;
+}
+
+/* ================= TIMELINE ================= */
+function Timeline({events, onExpand}) {
+  const [open,setOpen] = useState(null);
+  return <div style={{position:"relative",paddingLeft:28}}>
+    <div style={{position:"absolute",left:13,top:8,bottom:8,width:2,background:"var(--border)"}}/>
+    {events.map((e,idx)=>{
+      const expanded = open===idx;
+      return <div key={idx} style={{position:"relative",marginBottom:20}}>
+        <div style={{position:"absolute",left:-28,top:2,width:26,height:26,borderRadius:"50%",background:"var(--surface)",border:"2px solid var(--ink)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <Icon path={I[e.type]} size={13}/>
+        </div>
+        <button onClick={()=>setOpen(expanded?null:idx)} style={{width:"100%",textAlign:"left",background:"none",border:"none",padding:0}}>
+          <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:2}}>
+            <span style={{fontFamily:"var(--font-mono)",fontSize:13,color:"var(--ink-soft)"}}>{e.time}</span>
+            <span style={{fontWeight:600}}>{e.title}</span>
+          </div>
+          <p style={{margin:0,color:"var(--ink-soft)"}}>{e.detail}</p>
+          {expanded && e.worker && <p style={{margin:"6px 0 0",fontSize:12,color:"var(--ink-soft)"}}>Registrado por {e.worker}</p>}
+          {e.photo && <div style={{marginTop:8,height:110,borderRadius:10,background:"var(--surface-muted)",display:"flex",alignItems:"center",justifyContent:"center",gap:6,color:"var(--ink-soft)",fontSize:13}}><Icon path={I.camera} size={16}/>Foto compartida (demo)</div>}
+        </button>
+      </div>;
+    })}
+  </div>;
+}
+
+/* ================= FAMILY SCREENS ================= */
+function FamilyToday({go}) {
+  const resident = RESIDENTS[0];
+  const caregiver = CAREGIVERS[resident.caregiverId];
+  return <div style={{paddingBottom:32}}>
+    <div style={{padding:"20px 20px 16px",display:"flex",alignItems:"center",gap:12}}>
+      <Avatar initials={resident.initials} color={resident.color} size={52}/>
+      <div><h1 style={{fontSize:22}}>{resident.name.split(" ")[0]} está bien</h1>
+      <p style={{margin:0,fontSize:13,color:"var(--ink-soft)"}}>Última actualización: {resident.lastUpdate}</p></div>
+    </div>
+    <div style={{padding:"0 20px"}}>
+      <Card style={{marginBottom:24}}>
+        <p style={{margin:"0 0 8px",fontSize:12,fontWeight:700,letterSpacing:.4,textTransform:"uppercase",color:"var(--verified)"}}>Cuidado activo</p>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <Avatar initials={caregiver.initials} color={caregiver.color} size={48}/>
+          <div style={{flex:1}}><p style={{margin:0,fontWeight:600}}>{caregiver.name}</p>
+            <Badge tone="verified" size="sm" icon={<Icon path={I.shield} size={12}/>}>Profesional Verificada</Badge></div>
+        </div>
+        <p style={{margin:"12px 0 12px",fontSize:12,color:"var(--ink-soft)"}}>Horario: 8:00 AM – 5:00 PM</p>
+        <button onClick={()=>go("family_caregiver",{id:caregiver.id})} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"none",fontWeight:600,fontSize:12,padding:0}}>
+          Ver perfil <Icon path={I.chevron} size={14}/></button>
+      </Card>
+      <h2 style={{fontSize:18,marginBottom:16}}>Hoy</h2>
+      <Timeline events={TIMELINE_TODAY}/>
+    </div>
+  </div>;
+}
+function FamilyHistory() {
+  const days=[["Hoy","8 actualizaciones · turno completado"],["Ayer","7 actualizaciones · turno completado"],["Lunes 11 de agosto","6 actualizaciones · turno completado"]];
+  return <div><Header title="Historial" subtitle="Días anteriores de Carmen"/>
+    <div style={{padding:"0 20px",display:"flex",flexDirection:"column",gap:12}}>
+      {days.map(([l,d])=><Card key={l}><p style={{margin:0,fontWeight:600}}>{l}</p><p style={{margin:"4px 0 0",fontSize:12,color:"var(--ink-soft)"}}>{d}</p></Card>)}
+    </div></div>;
+}
+function FamilyMessages() {
+  return <div><Header title="Mensajes" subtitle="Con el equipo de Hogar Serenidad Demo"/>
+    <div style={{padding:"0 20px"}}>
+      <Card style={{background:"var(--warning-bg)",border:"none",marginBottom:16}}><p style={{margin:0,fontSize:12,color:"var(--warning)"}}>Para emergencias, llama directamente al (787) 555-0100.</p></Card>
+      <Card><p style={{margin:0,fontSize:12,color:"var(--ink-soft)"}}>Aún no has enviado mensajes. Escribe aquí si tienes alguna pregunta para el equipo de cuidado. (Demo — sin envío real)</p></Card>
+    </div></div>;
+}
+function FamilyProfile() {
+  const resident = RESIDENTS[0];
+  return <div><Header title="Perfil"/>
+    <div style={{padding:"0 20px",display:"flex",flexDirection:"column",gap:12}}>
+      <Card><p style={{margin:0,fontWeight:600}}>{FAMILY.name}</p><p style={{margin:"2px 0 0",fontSize:12,color:"var(--ink-soft)"}}>{FAMILY.relationship} de {resident.name}</p></Card>
+      <Card><p style={{margin:"0 0 8px",fontWeight:600,fontSize:12}}>Notificaciones</p><p style={{margin:0,fontSize:12,color:"var(--ink-soft)"}}>{FAMILY.canReceiveNotifications?"Activadas":"Desactivadas"}</p></Card>
+      <Card><p style={{margin:"0 0 8px",fontWeight:600,fontSize:12}}>Fotografías</p><p style={{margin:0,fontSize:12,color:"var(--ink-soft)"}}>{FAMILY.canViewPhotos?"Puedes ver fotos compartidas":"No autorizado"}</p></Card>
+    </div></div>;
+}
+function FamilyTrust({go}) {
+  const caregiver = CAREGIVERS.maria;
+  return <div><Header title="Centro de Confianza"/>
+    <div style={{padding:"0 20px"}}>
+      <Card onClick={()=>go("family_caregiver",{id:caregiver.id})} style={{textAlign:"center",marginBottom:20}}>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><Avatar initials={caregiver.initials} color={caregiver.color} size={64}/></div>
+        <p style={{margin:0,fontWeight:600,fontSize:18}}>{caregiver.name}</p>
+        <p style={{margin:"2px 0 12px",fontSize:12,color:"var(--ink-soft)"}}>Cuidadora</p>
+        <Badge tone="verified" icon={<Icon path={I.shield} size={16}/>}>Profesional Verificada</Badge>
+        <p style={{margin:"12px 0 0",fontSize:12,color:"var(--ink-soft)"}}>Verificación revisada por la plataforma</p>
+      </Card>
+      <p style={{fontWeight:600,fontSize:12,marginBottom:8}}>Requisitos verificados</p>
+      <Card style={{marginBottom:16}}>
+        {caregiver.credentials.map((c,i)=><div key={c.label} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderTop:i>0?"1px solid var(--border)":"none"}}>
+          <Icon path={I.check} size={16} color="var(--verified)"/><span>{c.label}</span></div>)}
+      </Card>
+      <p style={{fontSize:12,color:"var(--ink-soft)",marginBottom:16}}>Última revisión: {caregiver.lastReview}. La familia ve el estado resumido de cumplimiento — no se muestran documentos ni información privada.</p>
+      <button onClick={()=>go("family_caregiver",{id:caregiver.id})} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"none",fontWeight:600,padding:0}}>
+        Ver perfil completo <Icon path={I.chevron} size={16}/></button>
+    </div></div>;
+}
+function CaregiverProfile({id,onBack}) {
+  const c = CAREGIVERS[id];
+  const statusIcon = { ok:<Icon path={I.check} size={16} color="var(--verified)"/>, expiring:<Icon path={I.alert} size={16} color="var(--warning)"/>, action:<Icon path={I.alert} size={16} color="var(--critical)"/> };
+  return <div><Header title={`Perfil de ${c.name.split(" ")[0]}`} onBack={onBack}/>
+    <div style={{padding:"0 20px"}}>
+      <Card style={{textAlign:"center",marginBottom:20}}>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><Avatar initials={c.initials} color={c.color} size={72}/></div>
+        <p style={{margin:0,fontWeight:600,fontSize:18}}>{c.name}</p>
+        <p style={{margin:"2px 0 12px",fontSize:12,color:"var(--ink-soft)"}}>{c.role} · {c.years} años de experiencia</p>
+        {c.verified? <Badge tone="verified" icon={<Icon path={I.shield} size={14}/>}>Verified</Badge> : <Badge tone="warning">Action Required</Badge>}
+      </Card>
+      <p style={{fontWeight:600,fontSize:12,marginBottom:8}}>Idiomas</p>
+      <p style={{marginTop:0,marginBottom:16}}>{c.langs.join(", ")}</p>
+      <p style={{fontWeight:600,fontSize:12,marginBottom:8}}>Sobre {c.name.split(" ")[0]}</p>
+      <p style={{marginTop:0,marginBottom:20,color:"var(--ink-soft)"}}>{c.bio}</p>
+      <p style={{fontWeight:600,fontSize:12,marginBottom:8}}>Estado de requisitos</p>
+      <Card>{c.credentials.map((cr,i)=><div key={cr.label} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderTop:i>0?"1px solid var(--border)":"none"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>{statusIcon[cr.status]}<span>{cr.label}</span></div>
+        {cr.detail && <span style={{fontSize:12,color:"var(--warning)"}}>{cr.detail}</span>}
+      </div>)}</Card>
+    </div></div>;
+}
+
+/* ================= CAREGIVER SCREENS ================= */
+function CaregiverMyShift({shift,go}) {
+  const resident = RESIDENTS[0];
+  return <div><Header title="Mi turno de hoy"/>
+    <div style={{padding:"0 20px"}}>
+      <Card style={{textAlign:"center",marginBottom:20}}>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><Avatar initials={resident.initials} color={resident.color} size={64}/></div>
+        <p style={{margin:0,fontWeight:600,fontSize:18}}>{resident.name}</p>
+        <p style={{margin:"4px 0 12px",fontSize:12,color:"var(--ink-soft)"}}>Calle Flamboyán 142, Bayamón (demo)</p>
+        <p style={{margin:"0 0 16px",fontSize:12,color:"var(--ink-soft)"}}>Horario: 8:00 AM – 5:00 PM</p>
+        {shift.stage==="not_started" && <PrimaryButton onClick={()=>go("caregiver_checkin")}>Llegué</PrimaryButton>}
+        {shift.stage==="active" && <><Badge tone="active">Turno en curso</Badge><div style={{marginTop:12}}><PrimaryButton onClick={()=>go("caregiver_active")}>Ir al turno activo</PrimaryButton></div></>}
+        {shift.stage==="completed" && <Badge tone="verified">Turno completado</Badge>}
+      </Card>
+    </div></div>;
+}
+/* Verificación de identidad compartida por check-in y check-out -- mismo
+   componente, dos modos, porque ambos son verification_events del mismo
+   tipo en el backend (check_in / check_out), solo cambia la copia y el
+   destino al confirmar. */
+function CaregiverPinVerification({mode,onConfirm,go}) {
+  const isCheckout = mode==="checkout";
+  const [pin,setPin]=useState(""); const [err,setErr]=useState(false); const [ok,setOk]=useState(false);
+  React.useEffect(()=>{
+    if(pin.length!==4) return;
+    if(pin==="1234"){
+      setOk(true); onConfirm();
+      const t=setTimeout(()=>go(isCheckout?"caregiver_complete":"caregiver_active"),800);
+      return ()=>clearTimeout(t);
+    }
+    setErr(true); const t=setTimeout(()=>{setPin("");setErr(false);},700); return ()=>clearTimeout(t);
+  },[pin]);
+  if(ok) return <div style={{padding:"60px 20px",textAlign:"center"}}>
+    <p style={{fontFamily:"var(--font-display)",fontSize:22}}>{isCheckout?"Check-out confirmado":"Check-in confirmado"}</p>
+    <p style={{color:"var(--ink-soft)"}}>{isCheckout?"Cerrando el turno…":"Llevándote al turno activo…"}</p>
+  </div>;
+  return <div><Header title={isCheckout?"Verificar salida":"Verificar llegada"} onBack={()=>go(isCheckout?"caregiver_active":"caregiver_home")}/>
+    <div style={{padding:"0 20px"}}>
+      <p style={{textAlign:"center",marginBottom:20}}>{isCheckout?"Pide el código a la familia para cerrar el turno":"Solicita el código de 4 dígitos a la familia"}</p>
+      <div style={{display:"flex",justifyContent:"center",gap:10,marginBottom:20}}>
+        {[0,1,2,3].map(i=><div key={i} style={{width:44,height:52,borderRadius:10,border:`2px solid ${err?"var(--critical)":"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,fontFamily:"var(--font-mono)"}}>{pin[i]?"•":""}</div>)}
+      </div>
+      {err && <p style={{textAlign:"center",color:"var(--critical)",fontSize:12}}>Código incorrecto. Inténtalo de nuevo.</p>}
+      <p style={{textAlign:"center",fontSize:11,color:"var(--ink-soft)",marginBottom:16}}>(Demo — usa el código 1234)</p>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+        {["1","2","3","4","5","6","7","8","9"].map(d=><button key={d} onClick={()=>pin.length<4&&setPin(pin+d)} style={{height:64,borderRadius:16,border:"1px solid var(--border)",background:"var(--surface)",fontSize:24,fontWeight:600}}>{d}</button>)}
+        <div/><button onClick={()=>pin.length<4&&setPin(pin+"0")} style={{height:64,borderRadius:16,border:"1px solid var(--border)",background:"var(--surface)",fontSize:24,fontWeight:600}}>0</button>
+        <button onClick={()=>setPin(pin.slice(0,-1))} style={{height:64,borderRadius:16,border:"1px solid var(--border)",background:"var(--surface)",fontSize:22,fontWeight:600}}>⌫</button>
+      </div>
+    </div></div>;
+}
+function CaregiverActive({shift,logEvent,go}) {
+  const actions=[["Comida","meal",true],["Agua","hydration",false],["Baño","bath",false],["Movilidad","activity",false],["Actividad","activity",false],["Estado de ánimo","mood",false],["Nota","note",false],["Foto","camera",false]];
+  const [toast,setToast]=useState(null);
+  function quickLog(label){
+    logEvent(label);
+    setToast(label);
+    setTimeout(()=>setToast(null),1400);
+  }
+  return <div style={{paddingBottom:24,position:"relative"}}><Header title="Turno activo" subtitle="Carmen Rivera Demo"/>
+    <div style={{padding:"0 20px"}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20}}>
+        {actions.map(([label,icon,hasForm])=>{ const done=shift.logged.includes(label);
+          return <button key={label} onClick={()=>hasForm?go("caregiver_meal"):quickLog(label)} style={{aspectRatio:"1",borderRadius:16,border:`1px solid ${done?"var(--verified)":"var(--border)"}`,background:done?"var(--verified-bg)":"var(--surface)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,transition:"transform 0.15s"}}>
+            <Icon path={I[icon]} size={26} color={done?"var(--verified)":"var(--ink)"}/><span style={{fontSize:11,fontWeight:600,textAlign:"center"}}>{label}</span>
+            {done && <Icon path={I.check} size={12} color="var(--verified)"/>}
+          </button>;
+        })}
+      </div>
+      <button onClick={()=>go("caregiver_observation")} style={{width:"100%",minHeight:"var(--tap)",borderRadius:16,border:"1px solid var(--warning)",background:"var(--warning-bg)",color:"var(--warning)",fontWeight:600,marginBottom:12}}>Reportar cambio o preocupación</button>
+      <button onClick={()=>go("caregiver_incident")} style={{width:"100%",minHeight:"var(--tap)",borderRadius:16,border:"none",background:"var(--critical)",color:"white",fontWeight:700,marginBottom:24,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><Icon path={I.alert} size={18} color="white"/> Reportar incidente</button>
+      <PrimaryButton onClick={()=>go("caregiver_checkout")}>Finalizar turno</PrimaryButton>
+    </div>
+    {toast && <div style={{position:"fixed",bottom:24,left:20,right:20,maxWidth:390,margin:"0 auto",background:"var(--ink)",color:"white",borderRadius:16,padding:"14px 18px",display:"flex",alignItems:"center",gap:8,boxShadow:"0 8px 24px rgba(23,50,74,.25)",zIndex:50}}>
+      <Icon path={I.check} size={18} color="var(--verified)"/>
+      <span style={{fontWeight:600}}>{toast} registrado</span>
+    </div>}
+  </div>;
+}
+function CaregiverMeal({logEvent,go}) {
+  const [type,setType]=useState(null); const [amount,setAmount]=useState(null); const [saved,setSaved]=useState(false);
+  const Chips=({options,sel,onSel})=><div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}}>
+    {options.map(o=><button key={o} onClick={()=>onSel(o)} style={{padding:"10px 16px",borderRadius:999,border:`1.5px solid ${sel===o?"var(--ink)":"var(--border)"}`,background:sel===o?"var(--ink)":"var(--surface)",color:sel===o?"white":"var(--ink)",fontWeight:600,minHeight:"var(--tap)"}}>{o}</button>)}</div>;
+  if(saved) return <div style={{padding:"60px 20px",textAlign:"center"}}><p style={{fontFamily:"var(--font-display)",fontSize:22}}>Registrado</p></div>;
+  return <div><Header title="Comida" onBack={()=>go("caregiver_active")}/>
+    <div style={{padding:"0 20px"}}>
+      <p style={{fontWeight:600,marginBottom:8}}>Tipo</p><Chips options={["Desayuno","Almuerzo","Cena","Snack"]} sel={type} onSel={setType}/>
+      <p style={{fontWeight:600,marginBottom:8}}>Cantidad consumida</p><Chips options={["Poco","Mitad","Casi todo","Todo"]} sel={amount} onSel={setAmount}/>
+      <PrimaryButton disabled={!type||!amount} onClick={()=>{logEvent("Comida");setSaved(true);setTimeout(()=>go("caregiver_active"),700);}}>Guardar</PrimaryButton>
+    </div></div>;
+}
+function CaregiverObservation({go}) {
+  const options=["Menor apetito","Somnolencia","Confusión","Dolor","Cambio de comportamiento","Menor movilidad","Cambio en uso del baño","Estado emocional","Otro"];
+  const [sel,setSel]=useState(null); const [sent,setSent]=useState(false);
+  if(sent) return <div style={{padding:"60px 20px",textAlign:"center"}}>
+    <p style={{fontFamily:"var(--font-display)",fontSize:22,marginBottom:8}}>Enviado</p>
+    <p style={{color:"var(--ink-soft)",marginBottom:24}}>El equipo de cuidado podrá darle seguimiento.</p>
+    <PrimaryButton onClick={()=>go("caregiver_active")}>Volver al turno</PrimaryButton></div>;
+  return <div><Header title="¿Qué observaste?" onBack={()=>go("caregiver_active")}/>
+    <div style={{padding:"0 20px"}}>
+      <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+        {options.map(o=><button key={o} onClick={()=>setSel(o)} style={{textAlign:"left",padding:"12px 16px",borderRadius:16,border:`1.5px solid ${sel===o?"var(--warning)":"var(--border)"}`,background:sel===o?"var(--warning-bg)":"var(--surface)",fontWeight:600,minHeight:"var(--tap)"}}>{o}</button>)}
+      </div>
+      <PrimaryButton disabled={!sel} onClick={()=>setSent(true)}>Enviar para revisión</PrimaryButton>
+    </div></div>;
+}
+function CaregiverIncident({go}) {
+  const [desc,setDesc]=useState(""); const [sent,setSent]=useState(false);
+  if(sent) return <div style={{padding:"60px 20px",textAlign:"center"}}>
+    <p style={{fontFamily:"var(--font-display)",fontSize:22,marginBottom:8}}>Incidente reportado</p>
+    <p style={{color:"var(--ink-soft)",marginBottom:24}}>El supervisor y la familia fueron notificados.</p>
+    <PrimaryButton onClick={()=>go("caregiver_active")}>Volver al turno</PrimaryButton></div>;
+  return <div><Header title="Reportar incidente" onBack={()=>go("caregiver_active")}/>
+    <div style={{padding:"0 20px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,background:"var(--critical-bg)",color:"var(--critical)",borderRadius:16,padding:"12px 16px",marginBottom:20}}>
+        <Icon path={I.alert} size={18} color="var(--critical)"/><span style={{fontSize:12,fontWeight:600}}>Esto notifica de inmediato al supervisor y a la familia.</span></div>
+      <textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={5} placeholder="Describe el incidente…" style={{width:"100%",borderRadius:16,border:"1px solid var(--border)",padding:12,fontFamily:"var(--font-body)",fontSize:16,marginBottom:20,resize:"none"}}/>
+      <PrimaryButton critical disabled={!desc.trim()} onClick={()=>setSent(true)}>Enviar reporte de incidente</PrimaryButton>
+    </div></div>;
+}
+function CaregiverComplete({shift,resetShift,go}) {
+  return <div style={{padding:"60px 20px",textAlign:"center"}}>
+    <div style={{width:64,height:64,borderRadius:"50%",background:"var(--verified-bg)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}><Icon path={I.check} size={28} color="var(--verified)"/></div>
+    <p style={{fontFamily:"var(--font-display)",fontSize:22,marginBottom:4}}>Turno completado</p>
+    <p style={{color:"var(--ink-soft)",marginBottom:24}}>La familia de Carmen ya puede verlo. Registraste {shift.logged.length} {shift.logged.length===1?"evento":"eventos"}.</p>
+    <PrimaryButton onClick={()=>{resetShift();go("caregiver_home");}}>Volver a Mi Turno</PrimaryButton>
+  </div>;
+}
+
+/* ================= AGENCY SCREENS ================= */
+function StatCard({label,value}) {
+  return <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:16,padding:16,flex:"1 1 140px"}}>
+    <p style={{margin:0,fontSize:28,fontFamily:"var(--font-display)",fontWeight:600}}>{value}</p>
+    <p style={{margin:"2px 0 0",fontSize:12,color:"var(--ink-soft)"}}>{label}</p></div>;
+}
+function AgencyDashboard({orgType,setOrgType,go,assignments}) {
+  const residential = orgType==="RESIDENTIAL_CARE_HOME";
+  const alerts=["2 credenciales vencen esta semana","1 turno requiere cobertura","1 cambio de condición pendiente de revisión"];
+  return <div style={{padding:"24px 24px 40px",maxWidth:920,margin:"0 auto"}}>
+    <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:8}}>
+      <div><h1 style={{fontSize:28}}>Buenos días</h1><p style={{margin:"2px 0 0",color:"var(--ink-soft)"}}>Hogar Serenidad Demo</p></div>
+      <div><label style={{fontSize:12,color:"var(--ink-soft)",display:"block",marginBottom:4}}>Tipo de organización</label>
+        <select value={orgType} onChange={e=>setOrgType(e.target.value)} style={{padding:"8px 12px",borderRadius:10,border:"1px solid var(--border)",fontSize:12,background:"var(--surface)"}}>
+          <option value="RESIDENTIAL_CARE_HOME">Residential Care Home</option>
+          <option value="HOME_CARE_AGENCY">Home Care Agency</option>
+        </select></div>
+    </div>
+    <div style={{display:"flex",gap:12,flexWrap:"wrap",margin:"20px 0"}}>
+      <StatCard label={residential?"Residentes activos":"Pacientes activos"} value={3}/>
+      <StatCard label="Personal de turno" value={2}/>
+      <StatCard label={residential?"Cobertura de turnos":"Visitas de hoy"} value="100%"/>
+      <StatCard label="Profesionales verificados" value="92%"/>
+      <StatCard label="Credenciales por vencer" value={2}/>
+      <StatCard label="Incidentes abiertos" value={0}/>
+    </div>
+    <h2 style={{fontSize:18,marginBottom:12}}>Ahora</h2>
+    <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:24}}>
+      {RESIDENTS.map(r=>{
+        const assigned = r.caregiverId || assignments[r.id];
+        return <Card key={r.id} onClick={()=>go("agency_resident",{id:r.id})} style={{display:"flex",alignItems:"center",gap:12}}>
+        <Avatar initials={r.initials} color={r.color} size={40}/>
+        <div style={{flex:1}}><p style={{margin:0,fontWeight:600}}>{r.name}</p><p style={{margin:"2px 0 0",fontSize:12,color:"var(--ink-soft)"}}>{residential?r.room:"Visita a domicilio"}</p></div>
+        {r.status==="active_care" && <Badge tone="active" size="sm">Cuidado activo</Badge>}
+        {r.status==="shift_completed" && <Badge tone="verified" size="sm">Completado</Badge>}
+        {r.status==="upcoming" && !assigned && <Badge tone="critical" size="sm">Sin asignar</Badge>}
+        {r.status==="upcoming" && assigned && <Badge tone="neutral" size="sm">{r.statusDetail}</Badge>}
+        <Icon path={I.chevron} size={16} color="var(--ink-soft)"/>
+      </Card>;})}
+    </div>
+    <h2 style={{fontSize:18,marginBottom:12}}>Alertas</h2>
+    <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:24}}>
+      {alerts.map(a=><div key={a} style={{display:"flex",alignItems:"center",gap:8,background:"var(--warning-bg)",color:"var(--warning)",borderRadius:16,padding:"12px 16px"}}><Icon path={I.alert} size={16}/><span>{a}</span></div>)}
+    </div>
+    <button onClick={()=>go("agency_compliance")} style={{background:"none",border:"1px solid var(--border)",borderRadius:16,padding:"12px 20px",fontWeight:600,display:"flex",alignItems:"center",gap:6}}>Ver Centro de Cumplimiento <Icon path={I.chevron} size={16}/></button>
+  </div>;
+}
+function AgencyResident({id,go,assignments,assignCaregiver}) {
+  const tabs=["Resumen","Plan de cuidado","Familia","Timeline","Equipo","Documentos"];
+  const [tab,setTab]=useState("Resumen");
+  const [assignError,setAssignError]=useState(null);
+  const r = RESIDENTS.find(x=>x.id===id);
+  const assignedId = r.caregiverId || assignments[r.id];
+  const caregiver = assignedId ? CAREGIVERS[assignedId] : null;
+
+  function handleAssign(caregiverId) {
+    const ok = assignCaregiver(r.id, caregiverId);
+    if (!ok) {
+      const c = CAREGIVERS[caregiverId];
+      const missing = c.credentials.filter(cr=>cr.status==="action").map(cr=>cr.label).join(", ");
+      setAssignError(`${c.name.split(" ")[0]} no es elegible todavía — falta: ${missing}`);
+    } else {
+      setAssignError(null);
+    }
+  }
+
+  return <div style={{maxWidth:800,margin:"0 auto"}}>
+    <Header title={r.name} onBack={()=>go("agency_home")}/>
+    <div style={{padding:"0 24px"}}>
+      <div style={{display:"flex",gap:6,marginBottom:20,overflowX:"auto"}}>
+        {tabs.map(t=><button key={t} onClick={()=>setTab(t)} style={{padding:"8px 14px",borderRadius:999,border:"none",background:tab===t?"var(--ink)":"var(--surface-muted)",color:tab===t?"white":"var(--ink)",fontSize:13,fontWeight:600,whiteSpace:"nowrap"}}>{t}</button>)}
+      </div>
+      {tab==="Resumen" && <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <Card style={{display:"flex",alignItems:"center",gap:16}}><Avatar initials={r.initials} color={r.color} size={56}/>
+          <div><p style={{margin:0,fontWeight:600,fontSize:18}}>{r.name}</p><p style={{margin:"2px 0 0",color:"var(--ink-soft)",fontSize:12}}>{r.age} años · {r.room}</p></div></Card>
+        {caregiver && <Card style={{display:"flex",alignItems:"center",gap:12}}><Avatar initials={caregiver.initials} color={caregiver.color} size={40}/>
+          <div style={{flex:1}}><p style={{margin:0,fontWeight:600,fontSize:12}}>Cuidador actual</p><p style={{margin:"2px 0 0"}}>{caregiver.name}</p></div>
+          <Badge tone="verified" size="sm" icon={<Icon path={I.shield} size={12}/>}>Verified</Badge></Card>}
+        {!caregiver && <Card>
+          <p style={{margin:"0 0 4px",fontWeight:600,fontSize:12}}>Asignar cuidador</p>
+          <p style={{margin:"0 0 14px",fontSize:12,color:"var(--ink-soft)"}}>La asignación se bloquea automáticamente si el profesional no cumple con los requisitos obligatorios.</p>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {Object.values(CAREGIVERS).map(c=>{
+              const blocked = !c.verified;
+              const missing = blocked ? c.credentials.filter(cr=>cr.status==="action").map(cr=>cr.label).join(", ") : null;
+              return <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,opacity:blocked?0.65:1}}>
+                <Avatar initials={c.initials} color={c.color} size={36}/>
+                <div style={{flex:1}}>
+                  <p style={{margin:0,fontWeight:600,fontSize:13}}>{c.name}</p>
+                  {blocked
+                    ? <p style={{margin:"2px 0 0",fontSize:11,color:"var(--critical)"}}>No elegible — falta: {missing}</p>
+                    : <p style={{margin:"2px 0 0",fontSize:11,color:"var(--ink-soft)"}}>{c.role}</p>}
+                </div>
+                <button disabled={blocked} onClick={()=>handleAssign(c.id)} style={{padding:"8px 14px",borderRadius:999,border:"none",fontSize:12,fontWeight:600,
+                  background:blocked?"var(--border)":"var(--ink)",color:blocked?"var(--ink-soft)":"white",cursor:blocked?"not-allowed":"pointer"}}>
+                  Asignar
+                </button>
+              </div>;
+            })}
+          </div>
+          {assignError && <p style={{margin:"12px 0 0",fontSize:12,color:"var(--critical)"}}>{assignError}</p>}
+        </Card>}
+        <Card><p style={{margin:"0 0 8px",fontWeight:600,fontSize:12}}>Contactos familiares</p><p style={{margin:0}}>{FAMILY.name} — {FAMILY.relationship}</p></Card>
+        <Card><p style={{margin:"0 0 8px",fontWeight:600,fontSize:12}}>Observaciones abiertas</p><p style={{margin:0,color:"var(--ink-soft)"}}>Ninguna observación pendiente.</p></Card>
+      </div>}
+      {tab==="Plan de cuidado" && <Card><p style={{margin:"0 0 8px",fontWeight:600}}>Rutinas y preferencias (demo)</p><p style={{margin:0,color:"var(--ink-soft)"}}>Prefiere desayunar temprano. Movilidad asistida. Le gusta la música y el dominó.</p></Card>}
+      {tab==="Familia" && <Card><p style={{margin:0,fontWeight:600}}>{FAMILY.name}</p><p style={{margin:"2px 0 0",fontSize:12,color:"var(--ink-soft)"}}>{FAMILY.relationship}</p></Card>}
+      {tab==="Timeline" && <Timeline events={TIMELINE_TODAY}/>}
+      {tab==="Equipo" && caregiver && <Card onClick={()=>go("agency_caregiver",{id:caregiver.id})} style={{display:"flex",alignItems:"center",gap:12}}>
+        <Avatar initials={caregiver.initials} color={caregiver.color} size={40}/><div><p style={{margin:0,fontWeight:600}}>{caregiver.name}</p><p style={{margin:"2px 0 0",fontSize:12,color:"var(--ink-soft)"}}>{caregiver.role}</p></div></Card>}
+      {tab==="Equipo" && !caregiver && <Card><p style={{margin:0,color:"var(--ink-soft)"}}>Todavía no hay un cuidador asignado a este residente.</p></Card>}
+      {tab==="Documentos" && <Card><p style={{margin:0,color:"var(--ink-soft)"}}>Documentos del expediente (demo).</p></Card>}
+    </div></div>;
+}
+function AgencyCompliance({go}) {
+  const [filter,setFilter]=useState("all");
+  const list = Object.values(CAREGIVERS).filter(c=>{
+    if(filter==="all") return true;
+    if(filter==="verified") return c.verified;
+    if(filter==="action") return c.credentials.some(cr=>cr.status==="action");
+    if(filter==="expiring") return c.credentials.some(cr=>cr.status==="expiring");
+  });
+  const pct = Math.round(Object.values(CAREGIVERS).filter(c=>c.verified).length/Object.values(CAREGIVERS).length*100);
+  return <div style={{maxWidth:720,margin:"0 auto"}}>
+    <Header title="Confianza y Cumplimiento" onBack={()=>go("agency_home")}/>
+    <div style={{padding:"0 24px"}}>
+      <Card style={{marginBottom:20,textAlign:"center"}}><p style={{margin:0,fontSize:36,fontFamily:"var(--font-display)",fontWeight:600,color:"var(--verified)"}}>{pct}%</p>
+        <p style={{margin:"4px 0 0",color:"var(--ink-soft)"}}>del personal completamente verificado</p></Card>
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        {[["all","Todos"],["verified","Verificados"],["action","Requiere acción"],["expiring","Próximos a vencer"]].map(([k,l])=>
+          <button key={k} onClick={()=>setFilter(k)} style={{padding:"6px 14px",borderRadius:999,border:`1.5px solid ${filter===k?"var(--ink)":"var(--border)"}`,background:filter===k?"var(--ink)":"var(--surface)",color:filter===k?"white":"var(--ink)",fontSize:13,fontWeight:600}}>{l}</button>)}
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {list.map(c=>{ const expiring=c.credentials.find(cr=>cr.status==="expiring"); const action=c.credentials.some(cr=>cr.status==="action");
+          return <Card key={c.id} onClick={()=>go("agency_caregiver",{id:c.id})} style={{display:"flex",alignItems:"center",gap:12}}>
+            <Avatar initials={c.initials} color={c.color} size={40}/>
+            <div style={{flex:1}}><p style={{margin:0,fontWeight:600}}>{c.name}</p>{expiring && <p style={{margin:"2px 0 0",fontSize:12,color:"var(--warning)"}}>CPR vence en 12 días</p>}</div>
+            {c.verified && !expiring && <Badge tone="verified" size="sm" icon={<Icon path={I.shield} size={12}/>}>Verified</Badge>}
+            {expiring && <Badge tone="warning" size="sm">Expiring</Badge>}
+            {action && <Badge tone="critical" size="sm">Action Required</Badge>}
+          </Card>;})}
+      </div>
+    </div></div>;
+}
+
+/* ================= NAV SHELLS ================= */
+function FamilyTabBar({screen,go}) {
+  const tabs=[["family_today","Hoy","home"],["family_history","Historial","history"],["family_messages","Mensajes","message"],["family_trust","Confianza","shield"],["family_profile","Perfil","users"]];
+  return <nav style={{display:"flex",background:"var(--surface)",borderTop:"1px solid var(--border)",padding:"6px 4px"}}>
+    {tabs.map(([key,label,icon])=>{ const active = screen===key;
+      return <button key={key} onClick={()=>go(key)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"6px 2px",background:"none",border:"none",color:active?"var(--ink)":"var(--ink-soft)",minHeight:"var(--tap)"}}>
+        <Icon path={I[icon]} size={20}/><span style={{fontSize:11,fontWeight:600}}>{label}</span></button>;})}
+  </nav>;
+}
+function AppSwitcher({app,setApp}) {
+  const apps=[["family","App Familiar"],["caregiver","App Cuidador"],["agency","Portal Agencia"]];
+  return <div style={{display:"flex",justifyContent:"center",gap:6,padding:"10px 8px",background:"var(--ink)",flexWrap:"wrap"}}>
+    {apps.map(([key,label])=><button key={key} onClick={()=>setApp(key)} style={{padding:"6px 14px",borderRadius:999,fontSize:13,fontWeight:600,border:"none",background:app===key?"white":"transparent",color:app===key?"var(--ink)":"#cfe0ee"}}>{label}</button>)}
+  </div>;
+}
+
+/* ================= APP ROOT ================= */
+function App() {
+  const [app,setApp] = useState("family");
+  const [screen,setScreen] = useState("family_today");
+  const [params,setParams] = useState({});
+  const [shift,setShift] = useState({ stage:"not_started", logged:[] });
+  const [orgType,setOrgType] = useState("RESIDENTIAL_CARE_HOME");
+  const [assignments,setAssignments] = useState({});
+  // residentId -> caregiverId. La membresía debe estar 'verified' (elegible)
+  // para poder asignarse -- refleja la regla del backend: "la asignación
+  // rechaza si eligibility != eligible" (ver backend-architecture-plan.md).
+
+  function go(s,p={}) { setScreen(s); setParams(p); }
+  function switchApp(a) {
+    setApp(a);
+    if(a==="family") go("family_today");
+    if(a==="caregiver") go("caregiver_home");
+    if(a==="agency") go("agency_home");
+  }
+  function logEvent(label) { setShift(s=>({...s, logged:[...s.logged, label]})); }
+  function confirmCheckIn() { setShift(s=>({...s, stage:"active"})); }
+  function finishShift() { setShift(s=>({...s, stage:"completed"})); }
+  function resetShift() { setShift({stage:"not_started", logged:[]}); }
+  function assignCaregiver(residentId, caregiverId) {
+    const caregiver = CAREGIVERS[caregiverId];
+    if (!caregiver.verified) return false; // fail-closed, igual que el backend
+    setAssignments(a=>({...a,[residentId]:caregiverId}));
+    return true;
+  }
+
+  let body = null;
+  if (app==="family") {
+    if (screen==="family_today") body = <FamilyToday go={go}/>;
+    else if (screen==="family_history") body = <FamilyHistory/>;
+    else if (screen==="family_messages") body = <FamilyMessages/>;
+    else if (screen==="family_trust") body = <FamilyTrust go={go}/>;
+    else if (screen==="family_profile") body = <FamilyProfile/>;
+    else if (screen==="family_caregiver") body = <CaregiverProfile id={params.id} onBack={()=>go("family_trust")}/>;
+  } else if (app==="caregiver") {
+    if (screen==="caregiver_home") body = <CaregiverMyShift shift={shift} go={go}/>;
+    else if (screen==="caregiver_checkin") body = <CaregiverPinVerification mode="checkin" onConfirm={confirmCheckIn} go={go}/>;
+    else if (screen==="caregiver_active") body = <CaregiverActive shift={shift} logEvent={logEvent} go={go}/>;
+    else if (screen==="caregiver_meal") body = <CaregiverMeal logEvent={logEvent} go={go}/>;
+    else if (screen==="caregiver_observation") body = <CaregiverObservation go={go}/>;
+    else if (screen==="caregiver_incident") body = <CaregiverIncident go={go}/>;
+    else if (screen==="caregiver_checkout") body = <CaregiverPinVerification mode="checkout" onConfirm={finishShift} go={go}/>;
+    else if (screen==="caregiver_complete") body = <CaregiverComplete shift={shift} resetShift={resetShift} go={go}/>;
+  } else if (app==="agency") {
+    if (screen==="agency_home") body = <AgencyDashboard orgType={orgType} setOrgType={setOrgType} go={go} assignments={assignments}/>;
+    else if (screen==="agency_resident") body = <AgencyResident id={params.id} go={go} assignments={assignments} assignCaregiver={assignCaregiver}/>;
+    else if (screen==="agency_compliance") body = <AgencyCompliance go={go}/>;
+    else if (screen==="agency_caregiver") body = <CaregiverProfile id={params.id} onBack={()=>go("agency_compliance")}/>;
+  }
+
+  const isMobileApp = app==="family" || app==="caregiver";
+
+  return <div>
+    <AppSwitcher app={app} setApp={switchApp}/>
+    <div style={{maxWidth: isMobileApp?430:"100%", margin:"0 auto", minHeight:"calc(100dvh - 44px)", display:"flex", flexDirection:"column"}}>
+      <div style={{flex:1}}>{body}</div>
+      {app==="family" && <FamilyTabBar screen={screen} go={go}/>}
+    </div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
