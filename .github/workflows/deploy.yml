@@ -26,7 +26,7 @@ jobs:
       - name: unzip -q ETNARAfrontendbasepathfixed.zip
         run: |
           rm -rf frontend
-          unzip -q Frontend120pm.zip
+          unzip -q ETNARAfrontendbasepathfixed.zip
 
       - name: Fix Vite base for ETNARA repo
         working-directory: frontend
