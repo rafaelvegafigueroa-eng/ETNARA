@@ -23,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      -   name: unzip -q ETNARAfrontendfaviconfix.zip
+      - name: Unzip frontend
         run: |
           rm -rf frontend
           unzip -q ETNARAfrontendfaviconfix.zip
