@@ -33,10 +33,25 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
+
           p = Path("vite.config.ts")
           s = p.read_text()
-          s = s.replace("base: '/caretrust-prototipo/'", "base: '/ETNARA/'")
-          s = s.replace('base: "/caretrust-prototipo/"', 'base: "/ETNARA/"')
+
+          if re.search(r"\bbase\s*:", s):
+              s = re.sub(
+                  r"""base\s*:\s*['"][^'"]*['"]""",
+                  "base: '/ETNARA/'",
+                  s,
+                  count=1
+              )
+          else:
+              s = s.replace(
+                  "defineConfig({",
+                  "defineConfig({\n  base: '/ETNARA/',",
+                  1
+              )
+
           p.write_text(s)
           PY
       - name: Fix React Router basename for GitHub Pages
