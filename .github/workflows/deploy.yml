@@ -23,10 +23,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: unzip -q ETNARAfrontendbasepathfixed.zip
+      -   name: unzip -q ETNARAfrontendfaviconfix.zip
         run: |
           rm -rf frontend
-          unzip -q ETNARAfrontendbasepathfixed.zip
+          unzip -q ETNARAfrontendfaviconfix.zip
 
       - name: Fix Vite base for ETNARA repo
         working-directory: frontend
