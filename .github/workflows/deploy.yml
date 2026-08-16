@@ -39,6 +39,23 @@ jobs:
           s = s.replace('base: "/caretrust-prototipo/"', 'base: "/ETNARA/"')
           p.write_text(s)
           PY
+      - name: Fix React Router basename for GitHub Pages
+        working-directory: frontend
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("src/App.tsx")
+          s = p.read_text()
+
+          if "<BrowserRouter>" in s:
+              s = s.replace(
+                  "<BrowserRouter>",
+                  "<BrowserRouter basename={import.meta.env.BASE_URL}>"
+              )
+
+          p.write_text(s)
+          PY
 
       - name: Setup Node
         uses: actions/setup-node@v4
